@@ -13,12 +13,18 @@ if __FILE__==$0
     # DATA_DIR = ENV["HOME"] + ".config/"
     # Dir.mkdir(DATA_DIR) unless File.exists?(DATA_DIR)
 
-    BASE_VK_URL = "http://vk.com"
-    LIST_URL = BASE_VK_URL + "/" + cli_parser.options.addr
+    BASE_VK_URL = "https://vk.com"
+    LIST_URL = BASE_VK_URL + "/" + cli_parser.addr
 
-    HEADERS_HASH = {"User-Agent" => "Ruby/#{RUBY_VERSION}"}
+    HEADERS_HASH = {"User-Agent" => "Mozilla/5.0 (compatible; vkShare; +vk.com/dev/Share)"}
+    user_agent = "Mozilla/5.0 (compatible; vkShare; +vk.com/dev/Share)";
 
-    page = Nokogiri::HTML(open(LIST_URL))
-
-    puts page
+    begin
+        page = open(LIST_URL, 'User-Agnet' => user_agent)
+    rescue OpenURI::HTTPError
+        $stderr.print "Short address is avaliable!\n"
+        exit 0
+    end
+    parsed_page = Nokogiri::HTML::Document.parse(page)
+    puts "Page title: #{parsed_page.title}"
 end
