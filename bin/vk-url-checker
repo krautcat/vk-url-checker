@@ -1,21 +1,20 @@
+#! /usr/bin/env ruby
+
+require 'rubygems'
 require 'optparse'
 require 'pp'
 
+require 'vk-url-checker'
+
 class CliParser
 
+    # Class variables
     @allowed_opt = {
         :addr => ["-a", "--address"],
-        :expect => ["-e", "--expect"]
+        :title => ["-t", "--title"],
+        :conseq => ["-c", "--consequence"]
     }
-
     Options = Struct.new(*@allowed_opt.keys)
-
-    # class Options
-    #     attr_accessor :addr
-    #     def initialize
-    #         self.addr = "e_music"
-    #     end
-    # end
 
     class << self
         attr_reader :parser, :options
@@ -23,7 +22,6 @@ class CliParser
 
     def self.parse(args)
         @options = Options.new
-        pp options
         begin
             option_parser.parse!(args)
         rescue OptionParser::MissingArgument => mis_arg_e
@@ -58,29 +56,39 @@ class CliParser
         end
         # add additional options
         address_option
-        expectation_title_option
+        expectated_title_option
 
         @parser
     end
 
     def self.address_option
-        parser.on(:REQUIRED, @allowed_opt[:addr][0],
-            @allowed_opt[:addr][1] + " ADDR", String, "Address vk") do |addr|
+        parser.on(:REQUIRED, *make_options_list(:addr, "ADDR"), String,
+            "Address vk") do |addr|
             options.addr = addr
         end
     end
 
-    def self.expectation_title_option
-        parser.on(:OPTIONAL, @allowed_opt[:expect][0],@allowed_opt[:addr][1] +
-            " TITLE", String, "Expected title") do |addr|
-            options.addr = addr
+    def self.expectated_title_option
+        parser.on(:REQUIRED, *make_options_list(:title, "TITLE"), String,
+            "Expected title") do |title|
+            options.title = title
         end
+    end
+
+    def self.make_options_list(opt_sym, opt_holder)
+        [
+            @allowed_opt[opt_sym][0],
+            @allowed_opt[opt_sym][1] + " " + opt_holder
+        ]
     end
 
     def self.missing_arg_exception(expt)
         case arg = /\w: (?<arg>.*)/.match(expt.message)[:arg]
         when *@allowed_opt[:addr]
             $stderr.print "Missing argument: #{arg} <url>\n"
+            exit 1
+        when *@allowed_opt[:title]
+            $stderr.print "Missing argument: #{arg} <title>\n"
             exit 1
         end
     end
@@ -90,4 +98,23 @@ class CliParser
         exit 1
     end
 
+end
+
+if __FILE__==$0
+    # this will only run if the script was the main, not load'd or require'd
+    cli_parser = CliParser.parse(ARGV)
+
+    # DATA_DIR = ENV["HOME"] + ".config/"
+    # Dir.mkdir(DATA_DIR) unless File.exists?(DATA_DIR)
+
+    checker = VKTools::UrlChecker::Checker.new()
+
+    result = checker.check(cli_parser.addr);
+    if (result[:status] == VKTools::UrlChecker::STATUS[:Coincidence]) then
+        puts "OK!"
+    elsif (result[:status] == VKTools::UrlChecker::STATUS[:Avaliable]) then
+        puts "Short address is avaliable!\n"
+    elsif (result[:status] == VKTools::UrlChecker::STATUS[:Busy]) then
+        puts "Page title: #{result[:title]}"
+    end
 end
